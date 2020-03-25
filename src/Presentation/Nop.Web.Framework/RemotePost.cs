@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Nop.Core;
 using Nop.Core.Infrastructure;
@@ -124,15 +125,22 @@ namespace Nop.Web.Framework
             sb.Append("</form>");
             sb.Append("</body></html>");
 
+            var data = Encoding.UTF8.GetBytes(sb.ToString());
 
-            //post
+            //modify the response
             var httpContext = _httpContextAccessor.HttpContext;
             var response = httpContext.Response;
-            response.Clear();
-            var data = Encoding.UTF8.GetBytes(sb.ToString());
-            response.ContentType = "text/html; charset=utf-8";
-            response.ContentLength = data.Length;
 
+            //change headers after as the content is written to body
+            response.OnStarting(() =>
+            {
+                response.ContentType = "text/html; charset=utf-8";
+                response.ContentLength = data.Length;
+
+                return Task.CompletedTask;
+            });
+
+            response.Clear();
             response.Body.Write(data, 0, data.Length);
 
             //store a value indicating whether POST has been done
